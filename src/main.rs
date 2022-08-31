@@ -363,72 +363,69 @@ pub async fn run() {
     let mut state = State::new(&window).await;
 
     //TODO: HOLY FUCK THIS IS UNREADABLE
-    event_loop.run(move |event, _, control_flow| {
-        match event {
-            Event::WindowEvent {
-                window_id,
-                ref event,
-            } => {
-                if window_id == window.id() && !state.input(event) {
-                    match event {
-                        WindowEvent::CloseRequested
-                        | WindowEvent::KeyboardInput {
-                            input:
-                                KeyboardInput {
-                                    state: ElementState::Pressed,
-                                    virtual_keycode: Some(VirtualKeyCode::Escape),
-                                    ..
-                                },
-                            ..
-                        } => *control_flow = ControlFlow::Exit,
-                        WindowEvent::Resized(new_size) => {
-                            state.resize(*new_size);
-                        }
-                        WindowEvent::ScaleFactorChanged { new_inner_size, .. } => {
-                            state.resize(**new_inner_size);
-                        }
+    event_loop.run(move |event, _, control_flow| match event {
+        Event::WindowEvent {
+            window_id,
+            ref event,
+        } => {
+            if window_id == window.id() && !state.input(event) {
+                match event {
+                    WindowEvent::CloseRequested
+                    | WindowEvent::KeyboardInput {
+                        input:
+                            KeyboardInput {
+                                state: ElementState::Pressed,
+                                virtual_keycode: Some(VirtualKeyCode::Escape),
+                                ..
+                            },
+                        ..
+                    } => *control_flow = ControlFlow::Exit,
+                    WindowEvent::Resized(new_size) => {
+                        state.resize(*new_size);
+                    }
+                    WindowEvent::ScaleFactorChanged { new_inner_size, .. } => {
+                        state.resize(**new_inner_size);
+                    }
 
-                        _ => {}
-                    }
+                    _ => {}
                 }
             }
-            Event::RedrawRequested(window_id) => {
-                if window_id == window.id() {
-                    state.update();
-                    match state.render() {
-                        Ok(_) => {}
-                        Err(wgpu::SurfaceError::Lost) => state.resize(state.size),
-                        Err(wgpu::SurfaceError::OutOfMemory) => *control_flow = ControlFlow::Exit,
-                        Err(e) => eprintln!("{:?}", e),
-                    }
-                }
-            }
-            Event::MainEventsCleared => {
-                window.request_redraw();
-            }
-            _ => {}
         }
-
-        let new_texture = gen_bytes();
-        state.queue.write_texture(
-            wgpu::ImageCopyTexture {
-                texture: &state.texture,
-                mip_level: 0,
-                origin: wgpu::Origin3d::ZERO,
-                aspect: wgpu::TextureAspect::All,
-            },
-            &new_texture,
-            wgpu::ImageDataLayout {
-                offset: 0,
-                bytes_per_row: std::num::NonZeroU32::new(256 * 4),
-                rows_per_image: std::num::NonZeroU32::new(256),
-            },
-            wgpu::Extent3d {
-                width: 256,
-                height: 256,
-                depth_or_array_layers: 1,
-            },
-        );
+        Event::RedrawRequested(window_id) => {
+            let new_texture = gen_bytes();
+            state.queue.write_texture(
+                wgpu::ImageCopyTexture {
+                    texture: &state.texture,
+                    mip_level: 0,
+                    origin: wgpu::Origin3d::ZERO,
+                    aspect: wgpu::TextureAspect::All,
+                },
+                &new_texture,
+                wgpu::ImageDataLayout {
+                    offset: 0,
+                    bytes_per_row: std::num::NonZeroU32::new(256 * 4),
+                    rows_per_image: std::num::NonZeroU32::new(256),
+                },
+                wgpu::Extent3d {
+                    width: 256,
+                    height: 256,
+                    depth_or_array_layers: 1,
+                },
+            );
+            if window_id == window.id() {
+                state.update();
+                match state.render() {
+                    Ok(_) => {}
+                    Err(wgpu::SurfaceError::Lost) => state.resize(state.size),
+                    Err(wgpu::SurfaceError::OutOfMemory) => *control_flow = ControlFlow::Exit,
+                    Err(e) => eprintln!("{:?}", e),
+                }
+            }
+        }
+        Event::MainEventsCleared => {
+            window.request_redraw();
+        }
+        _ => {}
     });
 }
 
@@ -442,7 +439,7 @@ fn gen_bytes() -> Vec<u8> {
     let mut buf = vec![255; width * height * 4];
 
     let mut rng = rand::thread_rng();
-    for _i in 0..50_000 {
+    for _i in 0..1_000 {
         let x = rng.gen_range(0..width);
         let y = rng.gen_range(0..height);
         let new_r = rng.gen_range(0..255);
